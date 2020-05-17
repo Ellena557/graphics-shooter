@@ -1,4 +1,4 @@
-﻿#include "models.hpp"
+#include "models.hpp"
 #include <math.h>       
 
 void make_tree(Tree* res, const std::vector<GLfloat>& tree, const std::vector<GLfloat>& tree_colors,
@@ -26,7 +26,7 @@ void make_tree(Tree* res, const std::vector<GLfloat>& tree, const std::vector<GL
 	// Смещение и масштабирование.
 	for (int i = 0; i < tree_copy.size(); i += 3) {
 		tree_copy[i] = tree_copy[i] / scale + bias_x;
-		tree_copy[i + 1] = tree_copy[i + 1] / scale + bias_y;
+		tree_copy[i + 1] = tree_copy[i + 1] / scale; // +bias_y;
 		tree_copy[i + 2] = tree_copy[i + 2] / scale + bias_z;
 	}
 
@@ -41,8 +41,8 @@ void MakeSpruce::add_tree(Spruce* res)
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<> dis(0, 10000);
 
-	res->turn_xy = 2 * PI * dis(gen) / 10000.0;
-	res->turn_xz = 2 * PI * dis(gen) / 10000.0;
+	res->turn_xy = 2 * PI * dis(gen) / 150000.0;
+	res->turn_xz = 2 * PI * dis(gen) / 150000.0;
 	res->scale = dis(gen) / 2000.0 + 5;
 	res->bias_x = dis(gen) / 500.0 - 10;
 	res->bias_y = dis(gen) / 500.0 - 10;
@@ -433,5 +433,245 @@ void MakeForeground::add_foreground(glm::vec3 position, glm::vec3 direction, For
 
 	res->foreground = foreground;
 	res->foreground_color = foreground_color;
+	res->uves = uves;
+}
+
+
+void MakeFloor::add_floor(glm::vec3 position, int floor_range, Floor* res)
+{
+	float xx = position.x;
+	float yy = position.y;
+	float zz = position.z;
+	int scale = 1;
+	const int n_squares = 80*80;
+	int f_range = 80;
+	std::vector<GLfloat> floor(2 * (f_range+1) * 2 * (f_range+1)*3*3*2);
+	std::vector<GLfloat> colors(2 * (f_range + 1) * 2 * (f_range + 1) * 3*3*2);
+	std::vector<GLfloat> uv_coords(2 * (f_range + 1) * 2 * (f_range + 1) * 3*2*2);
+	int counter = 0;
+	int uv_counter = 0;
+	// вершины квадратов
+	for (int i = -f_range; i <= f_range; ++i) {
+		for (int j = -f_range; j <= f_range; ++j) {
+			//x
+			floor[counter] = xx + scale * (i);
+			colors[counter] = 0.0f;
+			counter++;
+
+			//y
+			floor[counter] = -1.0;
+			colors[counter] = 0.0f;
+			counter++;
+
+			//z
+			floor[counter] = zz + scale * (i+j);
+			colors[counter] = 1.0f;
+			counter++;
+
+			//x
+			floor[counter] = xx + scale * (i + 1);
+			colors[counter] = 0.0f;
+			counter++;
+
+			//y
+			floor[counter] = -1.0;
+			colors[counter] = 0.0f;
+			counter++;
+
+			//z
+			floor[counter] = zz + scale * (i + j);
+			colors[counter] = 1.0f;
+			counter++;
+
+			//x
+			floor[counter] = xx + scale * (i + 1);
+			colors[counter] = 0.0f;
+			counter++;
+
+			//y
+			floor[counter] = -1.0;
+			colors[counter] = 0.0f;
+			counter++;
+
+			//z
+			floor[counter] = zz + scale * (i + 1 + j + 1);
+			colors[counter] = 1.0f;
+			counter++;
+
+			//x
+			floor[counter] = xx + scale * (i);
+			colors[counter] = 0.0f;
+			counter++;
+
+			//y
+			floor[counter] = -1.0;
+			colors[counter] = 0.0f;
+			counter++;
+
+			//z
+			floor[counter] = zz + scale * (i + j);
+			colors[counter] = 1.0f;
+			counter++;
+
+			//x
+			floor[counter] = xx + scale * (i);
+			colors[counter] = 0.0f;
+			counter++;
+
+			//y
+			floor[counter] = -1.0;
+			colors[counter] = 0.0f;
+			counter++;
+
+			//z
+			floor[counter] = zz + scale * (i + j + 1);
+			colors[counter] = 1.0f;
+			counter++;
+
+			//x
+			floor[counter] = xx + scale * (i + 1);
+			colors[counter] = 0.0f;
+			counter++;
+
+			//y
+			floor[counter] = -1.0;
+			colors[counter] = 0.0f;
+			counter++;
+
+			//z
+			floor[counter] = zz + scale * (i + 1 + j + 1);
+			colors[counter] = 1.0f;
+			counter++;
+
+
+			uv_coords[uv_counter] = 0.0f;
+			uv_counter++;
+			uv_coords[uv_counter] = 0.0f;
+			uv_counter++;
+
+			uv_coords[uv_counter] = 0.5f;
+			uv_counter++;
+			uv_coords[uv_counter] = 0.0f;
+			uv_counter++;
+
+			uv_coords[uv_counter] = 1.0f;
+			uv_counter++;
+			uv_coords[uv_counter] = 1.0f;
+			uv_counter++;
+
+			uv_coords[uv_counter] = 0.0f;
+			uv_counter++;
+			uv_coords[uv_counter] = 0.0f;
+			uv_counter++;
+
+			uv_coords[uv_counter] = 0.0f;
+			uv_counter++;
+			uv_coords[uv_counter] = 0.5f;
+			uv_counter++;
+
+			uv_coords[uv_counter] = 1.0f;
+			uv_counter++;
+			uv_coords[uv_counter] = 1.0f;
+			uv_counter++;
+		}
+	}
+
+	res->floor = floor;
+	res->colors = colors;
+	res->uves = uv_coords;
+}
+
+
+void MakeSky::add_sky(glm::vec3 position, Sky* res)
+{
+	sky.resize(3 * 6 * N_PSI_big * N_PHI_big);
+	uves.resize(2 * N_PSI_big * N_PHI_big * 6);
+
+	glm::vec3 vertices[N_PSI_big][N_PHI_big];
+
+	for (int j = 0; j < N_PSI_big; ++j) {
+		for (int i = 0; i < N_PHI_big; ++i) {
+			float phi = i * 2 * PI / (N_PHI_big - 1);
+			float psi = j * PI / (N_PSI_big - 1);
+			vertices[j][i] = glm::vec3(sin(psi) * cos(phi), sin(psi) * sin(phi), cos(psi));
+		}
+	}
+
+	int k = 0;
+	int n = 0;
+
+	// add all sphere triangles
+	for (int j = 0; j < N_PSI_big - 1; ++j) {
+		for (int i = 0; i < N_PHI_big; ++i) {
+			sky[k++] = vertices[j][i].x;
+			sky[k++] = vertices[j][i].y;
+			sky[k++] = vertices[j][i].z;
+
+			sky[k++] = vertices[j + 1][i].x;
+			sky[k++] = vertices[j + 1][i].y;
+			sky[k++] = vertices[j + 1][i].z;
+
+			sky[k++] = vertices[j + 1][(i + 1) % N_PHI_big].x;
+			sky[k++] = vertices[j + 1][(i + 1) % N_PHI_big].y;
+			sky[k++] = vertices[j + 1][(i + 1) % N_PHI_big].z;
+
+			sky[k++] = vertices[j][i].x;
+			sky[k++] = vertices[j][i].y;
+			sky[k++] = vertices[j][i].z;
+
+			sky[k++] = vertices[j + 1][(i + 1) % N_PHI_big].x;
+			sky[k++] = vertices[j + 1][(i + 1) % N_PHI_big].y;
+			sky[k++] = vertices[j + 1][(i + 1) % N_PHI_big].z;
+
+			sky[k++] = vertices[j][(i + 1) % N_PHI_big].x;
+			sky[k++] = vertices[j][(i + 1) % N_PHI_big].y;
+			sky[k++] = vertices[j][(i + 1) % N_PHI_big].z;
+		}
+	}
+
+	// add texture  UV coordinates
+	for (int j = 0; j < N_PSI_big - 1; ++j) {
+		for (int i = 0; i < N_PHI_big; ++i) {
+			uves[n++] = (atan2(vertices[j][i].y, vertices[j][i].x) / (2 * PI) + 0.5);
+			uves[n++] = -asin(vertices[j][i].z) / PI + 0.5;
+
+			uves[n++] = (atan2(vertices[j + 1][i].y, vertices[j + 1][i].x) / (2 * PI) + 0.5);
+			uves[n++] = -asin(vertices[j + 1][i].z) / PI + 0.5;
+
+			uves[n++] = (atan2(vertices[j + 1][(i + 1) % N_PHI_big].y, vertices[j + 1][(i + 1) % N_PHI_big].x) / (2 * PI) + 0.5);
+			uves[n++] = -asin(vertices[j + 1][(i + 1) % N_PHI_big].z) / PI + 0.5;
+
+			uves[n++] = (atan2(vertices[j][i].y, vertices[j][i].x) / (2 * PI) + 0.5);
+			uves[n++] = -asin(vertices[j][i].z) / PI + 0.5;
+
+			uves[n++] = (atan2(vertices[j + 1][(i + 1) % N_PHI_big].y, vertices[j + 1][(i + 1) % N_PHI_big].x) / (2 * PI) + 0.5);
+			uves[n++] = -asin(vertices[j + 1][(i + 1) % N_PHI_big].z) / PI + 0.5;
+
+			uves[n++] = (atan2(vertices[j][(i + 1) % N_PHI_big].y, vertices[j][(i + 1) % N_PHI_big].x) / (2 * PI) + 0.5);
+			uves[n++] = -asin(vertices[j][(i + 1) % N_PHI_big].z) / PI + 0.5;
+
+			if (uves[n - 2] < uves[n - 6]) {
+				uves[n - 8] = 1;
+				uves[n - 4] = 1;
+				uves[n - 2] = 1;
+			}
+		}
+	}
+
+	for (int i = 0; i < sky.size(); ++i) {
+		sky[i] *= 70;
+	}
+
+	//Поворот
+	for (int i = 0; i < sky.size(); i += 3) {
+		float p = sky[i];
+		float q = sky[i + 1];
+		//float r = sky[i + 2];
+		sky[i] = q;
+		sky[i + 1] = p;
+		//sky[i + 2] = p * x.z + q * y.z + r * z.z;
+	}
+
+	res->sky = sky;
 	res->uves = uves;
 }
