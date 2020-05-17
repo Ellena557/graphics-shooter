@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #pragma comment(lib, "glfw3.lib")
 #pragma comment(lib, "glew32.lib")
 #pragma comment(lib, "freeglut.lib")
@@ -701,6 +701,9 @@ public:
 const int N_PHI = 50;
 const int N_PSI = 50;
 
+const int N_PHI_big = 100;
+const int N_PSI_big = 100;
+
 class MakeFireboll {
 private:
 	std::vector<GLfloat> boll;
@@ -740,4 +743,34 @@ private:
 
 public:
 	void add_foreground(glm::vec3 position, glm::vec3 direction, Foreground* res);
+};
+
+struct Floor {
+	std::vector<GLfloat> floor;
+	std::vector<GLfloat> colors;
+	std::vector<GLfloat> uves;
+};
+
+class MakeFloor {
+private:
+	std::vector<GLfloat> floor;
+	std::vector<GLfloat> colors;
+	std::vector<GLfloat> uves;
+
+public:
+	void add_floor(glm::vec3 position, int floor_range, Floor* res);
+};
+
+struct Sky {
+	std::vector<GLfloat> sky;
+	std::vector<GLfloat> uves;
+};
+
+class MakeSky {
+private:
+	std::vector<GLfloat> sky;
+	std::vector<GLfloat> uves;
+
+public:
+	void add_sky(glm::vec3 position, Sky* res);
 };
