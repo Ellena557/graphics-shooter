@@ -1,4 +1,4 @@
-﻿// Include standard headers
+// Include standard headers
 #pragma comment(lib, "glfw3.lib")
 #pragma comment(lib, "glew32.lib")
 #pragma comment(lib, "freeglut.lib")
@@ -35,6 +35,90 @@ using namespace glm;
 #include "common/shader.cpp"
 #include "common/texture.cpp" 
 #include "common/text2D.cpp" 
+
+
+void drawFloor(GLuint floor_texture_id, GLuint floor_texture, GLuint vertexbuffer, GLuint uvbuffer, std::vector<GLfloat> floor_buffer, std::vector<GLfloat> floor_uv) {
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glBufferData(GL_ARRAY_BUFFER, floor_buffer.size() * 4, floor_buffer.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+	glBufferData(GL_ARRAY_BUFFER, floor_uv.size() * 4, floor_uv.data(), GL_STATIC_DRAW);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, floor_texture);
+	glUniform1i(floor_texture_id, 0);
+
+	// 1rst attribute buffer : vertices
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glVertexAttribPointer(
+		0,                  // attribute. No particular reason for 0, but must match the layout in the shader.
+		3,                  // size
+		GL_FLOAT,           // type
+		GL_FALSE,           // normalized?
+		0,                  // stride
+		(void*)0            // array buffer offset
+	);
+
+	// 2nd attribute buffer : UVs
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+	glVertexAttribPointer(
+		1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
+		2,                                // size : U+V => 2
+		GL_FLOAT,                         // type
+		GL_FALSE,                         // normalized?
+		0,                                // stride
+		(void*)0                          // array buffer offset
+	);
+
+	glDrawArrays(GL_TRIANGLES, 0, floor_buffer.size()/3);
+
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+}
+
+void drawSky(GLuint sky_texture_id, GLuint sky_texture, GLuint vertexbuffer, GLuint uvbuffer, std::vector<GLfloat> sky_buffer, std::vector<GLfloat> sky_uv) {
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glBufferData(GL_ARRAY_BUFFER, sky_buffer.size() * 4, sky_buffer.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+	glBufferData(GL_ARRAY_BUFFER, sky_uv.size() * 4, sky_uv.data(), GL_STATIC_DRAW);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, sky_texture);
+	glUniform1i(sky_texture_id, 0);
+
+	// 1rst attribute buffer : vertices
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glVertexAttribPointer(
+		0,                  // attribute. No particular reason for 0, but must match the layout in the shader.
+		3,                  // size
+		GL_FLOAT,           // type
+		GL_FALSE,           // normalized?
+		0,                  // stride
+		(void*)0            // array buffer offset
+	);
+
+	// 2nd attribute buffer : UVs
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+	glVertexAttribPointer(
+		1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
+		2,                                // size : U+V => 2
+		GL_FLOAT,                         // type
+		GL_FALSE,                         // normalized?
+		0,                                // stride
+		(void*)0                          // array buffer offset
+	);
+
+	glDrawArrays(GL_TRIANGLES, 0, sky_buffer.size() / 3);
+
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+}
+
 
 int main(void)
 {
@@ -93,10 +177,18 @@ int main(void)
 	GLuint vertexbuffer;
 	GLuint colorbuffer;
 	GLuint uvbuffer;
+	GLuint floorvertexbuffer;		// to draw floor
+	GLuint flooruvbuffer;
+	GLuint skyvertexbuffer;			// to draw sky
+	GLuint skyuvbuffer;
 
 	glGenBuffers(1, &vertexbuffer);
 	glGenBuffers(1, &colorbuffer);
 	glGenBuffers(1, &uvbuffer);
+	glGenBuffers(1, &floorvertexbuffer);
+	glGenBuffers(1, &flooruvbuffer);
+	glGenBuffers(1, &skyvertexbuffer);
+	glGenBuffers(1, &skyuvbuffer);
 
 	std::random_device rd;
 	std::mt19937 gen(rd());
@@ -107,12 +199,22 @@ int main(void)
 	MakeStump stump_maker;
 	MakeSpruceFireboll tree_boll_maker;
 	MakeForeground foreground_maker;
+	MakeFloor floor_maker;
+	MakeSky sky_maker;
 
 	std::vector<Spruce> trees;
 	std::vector<Stump> stumps;
 	std::vector<Fireboll> firebolls;
 	std::vector<SpruceFireboll> tree_bolls;
 	std::vector<Foreground> foreground;
+	std::vector<Floor> floor;
+	std::vector<Sky> sky;
+
+	std::vector<GLfloat> fl_vertex_buffer_data = {};
+	std::vector<GLfloat> fl_uv_buffer_data = {};
+
+	std::vector<GLfloat> sky_vertex_buffer_data = {};
+	std::vector<GLfloat> sky_uv_buffer_data = {};
 
 	// Возможные цвета фона
 	std::vector<glm::vec4> backgrounds = { {0.7f, 1.0f, 0.7f, 0.0f},
@@ -130,8 +232,12 @@ int main(void)
 	int old_defence_state = GLFW_RELEASE;
 	int old_background_state = GLFW_RELEASE;
 	int old_texture_state = GLFW_RELEASE;
+	int old_floor_texture_state = GLFW_RELEASE;
+	int old_sky_texture_state = GLFW_RELEASE;
 	int backgorund_id = 0;
 	int player_score = 0;
+	int prev_floor_build_time = -10; // когда в прошлый раз добавляли пол
+	int prev_sky_build_time = -1000;
 
 	glClearColor(backgrounds[backgorund_id][0], backgrounds[backgorund_id][1], backgrounds[backgorund_id][2], backgrounds[backgorund_id][3]);
 	bool defence = false; // Защищаются ли ёлки.
@@ -156,8 +262,29 @@ int main(void)
 	GLuint Texture6 = loadBMP_custom("fireearth6.bmp");
 	GLuint TextureID6 = glGetUniformLocation(programID1, "myTextureSampler");
 
-	// текущая текстура
+	GLuint Texture_floor = loadBMP_custom("sand.bmp");
+	GLuint TextureID_floor = glGetUniformLocation(programID1, "myTextureSampler");
+
+	GLuint Texture_floor_1 = loadBMP_custom("lava.bmp");
+	GLuint TextureID_floor_1 = glGetUniformLocation(programID1, "myTextureSampler");
+
+	GLuint Texture_floor_2 = loadBMP_custom("grass.bmp");
+	GLuint TextureID_floor_2 = glGetUniformLocation(programID1, "myTextureSampler");
+
+	GLuint Texture_sky = loadBMP_custom("sky2.bmp");
+	GLuint TextureID_sky = glGetUniformLocation(programID1, "myTextureSampler");
+
+	GLuint Texture_sky_2 = loadBMP_custom("sky1.bmp");
+	GLuint Texture_sky_3 = loadBMP_custom("sky4.bmp");
+
+	// текущая текстура для снаряда
 	GLuint current_texture_num = 0;
+
+	// текущая текстура для пола
+	GLuint current_floor_texture_num = 1;
+
+	// текущая текстура для неба
+	GLuint current_sky_texture_num = 0;
 
 	std::vector<GLuint> textures = {
 		Texture,
@@ -175,6 +302,18 @@ int main(void)
 		TextureID4,
 		TextureID5,
 		TextureID6
+	};
+
+	std::vector<GLuint> floor_textures = {
+		Texture_floor,
+		Texture_floor_1,
+		Texture_floor_2
+	};
+
+	std::vector<GLuint> sky_textures = {
+		Texture_sky,
+		Texture_sky_2,
+		Texture_sky_3
 	};
 
 	glUseProgram(programID1);
@@ -200,13 +339,29 @@ int main(void)
 		}
 		old_background_state = new_background_state;
 
-		// Изменение текстуры по нажатию "T"
+		// Изменение текстуры снаряда по нажатию "T"
 		int new_texture_state = glfwGetKey(window, GLFW_KEY_T);
 		if (new_texture_state == GLFW_RELEASE && old_texture_state == GLFW_PRESS) {
 			current_texture_num += 1;
 			current_texture_num %= textures.size();
 		}
 		old_texture_state = new_texture_state;
+
+		// Изменение текстуры пола по нажатию "F"
+		int new_floor_texture_state = glfwGetKey(window, GLFW_KEY_F);
+		if (new_floor_texture_state == GLFW_RELEASE && old_floor_texture_state == GLFW_PRESS) {
+			current_floor_texture_num += 1;
+			current_floor_texture_num %= floor_textures.size();
+		}
+		old_floor_texture_state = new_floor_texture_state;
+
+		// Изменение текстуры неба по нажатию "S"
+		int new_sky_texture_state = glfwGetKey(window, GLFW_KEY_S);
+		if (new_sky_texture_state == GLFW_RELEASE && old_sky_texture_state == GLFW_PRESS) {
+			current_sky_texture_num += 1;
+			current_sky_texture_num %= sky_textures.size();
+		}
+		old_sky_texture_state = new_sky_texture_state;
 
 		// Изменение размера фаерболов по нажатию "+ или -"
 		// GLFW_KEY_MINUS, GLFW_KEY_EQUAL
@@ -299,6 +454,51 @@ int main(void)
 				break;
 			}
 		}
+		
+
+		// Обновление пола
+		if (glfwGetTime() - prev_floor_build_time > 10) {
+			//Удаление старого пола 
+		    for (int i = 0; i < floor.size(); ++i) {
+			    std::swap(floor[i], floor[floor.size() - 1]);
+			    floor.pop_back();
+		    }
+
+			// Добавление нового пола
+			floor.resize(floor.size() + 1);
+			floor_maker.add_floor(getPosition(), 10, &floor[floor.size() - 1]);
+			fl_vertex_buffer_data = {};
+			fl_uv_buffer_data = {};
+			for (Floor fl : floor) {
+		    	fl_vertex_buffer_data.insert(fl_vertex_buffer_data.end(), fl.floor.begin(), fl.floor.end());
+		        fl_uv_buffer_data.insert(fl_uv_buffer_data.end(), fl.uves.begin(), fl.uves.end());
+		    }
+
+			prev_floor_build_time = glfwGetTime();
+			drawFloor(TextureID_floor, Texture_floor, floorvertexbuffer, flooruvbuffer, fl_vertex_buffer_data, fl_uv_buffer_data);
+		}
+
+		// Обновление неба
+		if (glfwGetTime() - prev_sky_build_time > 20) {
+			//Удаление старого неба 
+			for (int i = 0; i < sky.size(); ++i) {
+				std::swap(sky[i], sky[sky.size() - 1]);
+				sky.pop_back();
+			}
+
+			// Добавление нового неба
+			sky.resize(sky.size() + 1);
+			sky_maker.add_sky(getPosition(), &sky[sky.size() - 1]);
+			sky_vertex_buffer_data = {};
+			sky_uv_buffer_data = {};
+			for (Sky sk : sky) {
+				sky_vertex_buffer_data.insert(sky_vertex_buffer_data.end(), sk.sky.begin(), sk.sky.end());
+				sky_uv_buffer_data.insert(sky_uv_buffer_data.end(), sk.uves.begin(), sk.uves.end());
+			}
+
+			prev_sky_build_time = glfwGetTime();
+			drawSky(TextureID_sky, Texture_sky, skyvertexbuffer, skyuvbuffer, sky_vertex_buffer_data, sky_uv_buffer_data);
+		}
 
 		// Действие эффекта попадания в игрока (в течении 5 секунд : 1я половина секунды - бездействие)
 		if (glfwGetTime() - effect_start < 0.5 && alive == 1) {
@@ -373,6 +573,12 @@ int main(void)
 			g_uv_buffer_data.insert(g_uv_buffer_data.end(), f.uves.begin(), f.uves.end());
 		}
 
+		//for (Floor fl : floor) {
+		//	g_vertex_buffer_data.insert(g_vertex_buffer_data.end(), fl.floor.begin(), fl.floor.end());
+		//	g_color_buffer_data.insert(g_color_buffer_data.end(), fl.colors.begin(), fl.colors.end());
+		//	g_uv_buffer_data.insert(g_uv_buffer_data.end(), fl.uves.begin(), fl.uves.end());
+		//}
+
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 		glBufferData(GL_ARRAY_BUFFER, g_vertex_buffer_data.size() * 4, g_vertex_buffer_data.data(), GL_STATIC_DRAW);
 
@@ -446,6 +652,75 @@ int main(void)
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, floor_textures[current_floor_texture_num]);
+		glUniform1i(TextureID_floor, 0);
+
+		// 1rst attribute buffer : vertices
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, floorvertexbuffer);
+		glVertexAttribPointer(
+			0,                  // attribute. No particular reason for 0, but must match the layout in the shader.
+			3,                  // size
+			GL_FLOAT,           // type
+			GL_FALSE,           // normalized?
+			0,                  // stride
+			(void*)0            // array buffer offset
+		);
+
+		// 2nd attribute buffer : UVs
+		glEnableVertexAttribArray(1);
+		glBindBuffer(GL_ARRAY_BUFFER, flooruvbuffer);
+		glVertexAttribPointer(
+			1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
+			2,                                // size : U+V => 2
+			GL_FLOAT,                         // type
+			GL_FALSE,                         // normalized?
+			0,                                // stride
+			(void*)0                          // array buffer offset
+		);
+
+		// Draw the triangles 
+		glDrawArrays(GL_TRIANGLES, 0, fl_vertex_buffer_data.size() / 3);
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+
+		//sky 
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, sky_textures[current_sky_texture_num]);
+		glUniform1i(TextureID_sky, 0);
+
+		// 1rst attribute buffer : vertices
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, skyvertexbuffer);
+		glVertexAttribPointer(
+			0,                  // attribute. No particular reason for 0, but must match the layout in the shader.
+			3,                  // size
+			GL_FLOAT,           // type
+			GL_FALSE,           // normalized?
+			0,                  // stride
+			(void*)0            // array buffer offset
+		);
+
+		// 2nd attribute buffer : UVs
+		glEnableVertexAttribArray(1);
+		glBindBuffer(GL_ARRAY_BUFFER, skyuvbuffer);
+		glVertexAttribPointer(
+			1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
+			2,                                // size : U+V => 2
+			GL_FLOAT,                         // type
+			GL_FALSE,                         // normalized?
+			0,                                // stride
+			(void*)0                          // array buffer offset
+		);
+
+		// Draw the triangles 
+		glDrawArrays(GL_TRIANGLES, 0, sky_vertex_buffer_data.size() / 3);
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
 
 		char text[256];
 		sprintf(text, "SCORE:%d ", player_score);
