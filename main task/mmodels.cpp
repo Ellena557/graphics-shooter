@@ -61,14 +61,18 @@ void MakeStump::add_tree(Stump* res, const Spruce& spruce)
 	res->birth = glfwGetTime();
 }
 
-MakeFireboll::MakeFireboll()
+//MakeFireboll::MakeFireboll(int N_PHI, int N_PSI)
+MakeFireboll::MakeFireboll(int detals)
 {
+	int N_PHI = detals;
+	int N_PSI = detals;
 	int N_PSI_part = N_PSI * 2 / 3;
 	boll.resize(3 * 6 * N_PSI * N_PHI);
 	boll_colors.resize(3 * 6 * N_PSI * N_PHI);
 	uves.resize(2 * N_PSI * N_PHI * 6);
+	normals.resize(3 * N_PSI * N_PHI * 6);
 
-	glm::vec3 vertices[N_PSI][N_PHI];
+	glm::vec3 vertices[100][100];
 
 	for (int j = 0; j < N_PSI; ++j) {
 		for (int i = 0; i < N_PHI; ++i) {
@@ -79,7 +83,7 @@ MakeFireboll::MakeFireboll()
 	}
 
 	//add u, v, poles are with z coordinate
-	glm::vec2 uv_coords[N_PSI][N_PHI];
+	glm::vec2 uv_coords[100][100];
 
 	for (int j = 1; j < N_PSI_part; ++j) {
 		for (int i = 0; i < N_PHI; ++i) {
@@ -129,6 +133,10 @@ MakeFireboll::MakeFireboll()
 		boll_colors[i] = 0;
 	}
 
+	for (int i = 0; i < k; ++i) {
+		normals[i] = 0;
+	}
+
 	// add texture  UV coordinates
 	for (int j = 0; j < N_PSI - 1; ++j) {
 		for (int i = 0; i < N_PHI; ++i) {
@@ -158,6 +166,10 @@ MakeFireboll::MakeFireboll()
 		}
 	}
 
+}
+
+MakeFireboll::MakeFireboll(std::vector<GLfloat> boll, std::vector<GLfloat> boll_colors, std::vector<GLfloat> uves, std::vector<GLfloat> normals) {
+	
 }
 
 void MakeFireboll::add_boll(glm::vec3 position, glm::vec3 direction, int scale, Fireboll* res)
@@ -206,26 +218,28 @@ void MakeFireboll::add_boll(glm::vec3 position, glm::vec3 direction, int scale, 
 	res->radius = 1.0 / scale;
 	res->centre = position;
 	res->birth = glfwGetTime();
+	res->isExploded = 0;
+	res->normals = normals;
 }
 
-void MakeFireboll::find_position(Fireboll* res)
+void MakeFireboll::find_position(Fireboll* res, float speed)
 {
 	double delta_time = glfwGetTime() - res->birth;
 	for (int i = 0; i < res->boll.size(); i += 3) {
-		res->boll[i] += res->direction.x * delta_time * res->speed;
-		res->boll[i + 1] += res->direction.y * delta_time * res->speed;
-		res->boll[i + 2] += res->direction.z * delta_time * res->speed;
+		res->boll[i] += res->direction.x * delta_time * speed;
+		res->boll[i + 1] += res->direction.y * delta_time * speed;
+		res->boll[i + 2] += res->direction.z * delta_time * speed;
 	}
-	res->centre += res->direction * (float)delta_time * res->speed;
+	res->centre += res->direction * (float)delta_time * speed;
 }
 
-MakeSpruceFireboll::MakeSpruceFireboll()
+MakeSpruceFireboll::MakeSpruceFireboll(int N_PHI, int N_PSI)
 {
 	int N_PSI_part = N_PSI * 2 / 3;
 	boll.resize(2 * N_PSI_part * N_PHI * 9);
 	boll_colors.resize(2 * N_PSI_part * N_PHI * 9);
 
-	glm::vec3 vertices[N_PSI][N_PHI];
+	glm::vec3 vertices[100][100];
 
 	for (int j = 1; j < N_PSI_part; ++j) {
 		for (int i = 0; i < N_PHI; ++i) {
@@ -377,15 +391,15 @@ void MakeSpruceFireboll::add_boll(glm::vec3 position, glm::vec3 direction, Spruc
 	res->birth = glfwGetTime();
 }
 
-void MakeSpruceFireboll::find_position(SpruceFireboll* res)
+void MakeSpruceFireboll::find_position(SpruceFireboll* res, float speed)
 {
 	double delta_time = glfwGetTime() - res->birth;
 	for (int i = 0; i < res->boll.size(); i += 3) {
-		res->boll[i] += res->direction.x * delta_time * res->speed;
-		res->boll[i + 1] += res->direction.y * delta_time * res->speed;
-		res->boll[i + 2] += res->direction.z * delta_time * res->speed;
+		res->boll[i] += res->direction.x * delta_time * speed;
+		res->boll[i + 1] += res->direction.y * delta_time * speed;
+		res->boll[i + 2] += res->direction.z * delta_time * speed;
 	}
-	res->centre += res->direction * (float)delta_time * res->speed;
+	res->centre += res->direction * (float)delta_time * speed;
 }
 
 void MakeForeground::add_foreground(glm::vec3 position, glm::vec3 direction, Foreground* res)
@@ -674,4 +688,97 @@ void MakeSky::add_sky(glm::vec3 position, Sky* res)
 
 	res->sky = sky;
 	res->uves = uves;
+}
+
+
+void MakeFireboll::add_exploded_ball(ExplodedBall* res, Fireboll* fireball, double time, float speed, float normals_speed)
+{
+	res->speed = fireball->speed;
+	int n = fireball->boll.size();
+	std::vector<GLfloat> normals = fireball->normals;
+
+	// direction of the normal
+	float xx;
+	float yy;
+	float zz;
+	int counter = 0;
+
+	for (int i = 0; i < n; i += 9) {
+		float x1 = fireball->boll[i];
+		float y1 = fireball->boll[i + 1];
+		float z1 = fireball->boll[i + 2];
+		float x2 = fireball->boll[i + 3];
+		float y2 = fireball->boll[i + 4];
+		float z2 = fireball->boll[i + 5];
+		float x3 = fireball->boll[i + 6];
+		float y3 = fireball->boll[i + 7];
+		float z3 = fireball->boll[i + 8];
+
+		xx = (y3 - y1) * (z2 - z1) - (y2 - y1) * (z3 - z1);
+		yy = -((x3 - x1) * (z2 - z1) - (x2 - x1) * (z3 - z1));
+		zz = (x3 - x1) * (y2 - y1) - (x2 - x1) * (y3 - y1);
+		normals[counter] = xx;
+		normals[counter + 1] = yy;
+		normals[counter + 2] = zz;
+		counter += 3;
+	}
+
+	for (int i = 0; i < normals.size(); i += 1) {
+		//normals[i] *= 1000;
+		normals[i] *= 50 * normals_speed * normals_speed;
+	}
+
+	double delta_time = time - fireball->birth;
+	res->boll = fireball->boll;
+
+	for (int i = 0; i < res->boll.size(); i += 3) {
+		res->boll[i] += fireball->direction.x * delta_time * speed;
+		res->boll[i + 1] += fireball->direction.y * delta_time * speed;
+		res->boll[i + 2] += fireball->direction.z * delta_time * speed;
+	}
+
+	res->boll_colors = fireball->boll_colors;
+
+	for (int i = 0; i < res->boll_colors.size(); i += 9) {
+		res->boll_colors[i] = 1.0f;
+		res->boll_colors[i + 1] = 0.01f;
+		res->boll_colors[i + 2] = 0.01f;
+		res->boll_colors[i + 3] = 0.98f;
+		res->boll_colors[i + 4] = 0.79f;
+		res->boll_colors[i + 5] = 0.02f;
+		res->boll_colors[i + 6] = 0.98f;
+		res->boll_colors[i + 7] = 0.32f;
+		res->boll_colors[i + 8] = 0.02f;
+	}
+
+	res->uves = fireball->uves;
+	res->normals = normals;
+	res->birth = fireball->explosion_time;
+}
+
+void MakeFireboll::find_explosion_coords(ExplodedBall* res, float speed)
+{
+	double delta_time = glfwGetTime() - res->birth;
+
+	int n = res->boll.size();
+	int counter = 0;
+	float xx;
+	float yy;
+	float zz;
+	for (int i = 0; i < n; i += 9) {
+		xx = res->normals[counter];
+		yy = res->normals[counter + 1];
+		zz = res->normals[counter + 2];
+		counter += 3;
+
+		res->boll[i] += xx * delta_time * speed;
+		res->boll[i + 1] += yy * delta_time * speed;
+		res->boll[i + 2] += zz * delta_time * speed;
+		res->boll[i + 3] += xx * delta_time * speed;
+		res->boll[i + 4] += yy * delta_time * speed;
+		res->boll[i + 5] += zz * delta_time * speed;
+		res->boll[i + 6] += xx * delta_time * speed;
+		res->boll[i + 7] += yy * delta_time * speed;
+		res->boll[i + 8] += zz * delta_time * speed;
+	}
 }
