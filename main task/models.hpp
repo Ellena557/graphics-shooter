@@ -50,10 +50,24 @@ struct Fireboll {
 	glm::vec3 direction;
 	float speed = 0.5f;
 	double birth;
+	int isExploded;
+	double explosion_time = 0;
+	int detalization = 50;
 
 	std::vector<GLfloat> boll;
 	std::vector<GLfloat> boll_colors;
 	std::vector<GLfloat> uves;
+	std::vector<GLfloat> normals;
+};
+
+struct ExplodedBall {
+	float speed = 0.5f;
+	double birth = 0;
+
+	std::vector<GLfloat> boll;
+	std::vector<GLfloat> boll_colors;
+	std::vector<GLfloat> uves;
+	std::vector<GLfloat> normals;
 };
 
 struct SpruceFireboll {
@@ -698,8 +712,8 @@ public:
 	void add_tree(Stump* res, const Spruce& spruce);
 };
 
-const int N_PHI = 50;
-const int N_PSI = 50;
+//const int N_PHI = 50;
+//const int N_PSI = 50;
 
 const int N_PHI_big = 100;
 const int N_PSI_big = 100;
@@ -709,11 +723,20 @@ private:
 	std::vector<GLfloat> boll;
 	std::vector<GLfloat> boll_colors;
 	std::vector<GLfloat> uves;
+	std::vector<GLfloat> normals;
 
 public:
-	MakeFireboll();
+	int detalization = 50;
+	//MakeFireboll(int N_PHI, int N_PSI);
+	MakeFireboll(int detals);
+	//MakeFireboll(glm::vec3 centre, double radius, glm::vec3 direction, double birth, int isExploded, double explosion_time,
+	//	std::vector<GLfloat> boll, std::vector<GLfloat> boll_colors, std::vector<GLfloat> uves, std::vector<GLfloat> normals, float speed = 0.5f);
+	MakeFireboll(std::vector<GLfloat> boll, std::vector<GLfloat> boll_colors, std::vector<GLfloat> uves, std::vector<GLfloat> normals);
+	Fireboll create_boll(glm::vec3 position, glm::vec3 direction, int scale, int detaliz);
 	void add_boll(glm::vec3 position, glm::vec3 direction, int scale, Fireboll* res);
-	void find_position(Fireboll* res);
+	void find_position(Fireboll* res, float speed);
+	void add_exploded_ball(ExplodedBall* res, Fireboll* fireball, double time, float speed, float normals_speed);
+	void find_explosion_coords(ExplodedBall* res, float speed);
 };
 
 class MakeSpruceFireboll {
@@ -724,9 +747,9 @@ private:
 	const int scale = 40;
 
 public:
-	MakeSpruceFireboll();
+	MakeSpruceFireboll(int N_PHI, int N_PSI);
 	void add_boll(glm::vec3 position, glm::vec3 direction, SpruceFireboll* res);
-	void find_position(SpruceFireboll* res);
+	void find_position(SpruceFireboll* res, float speed);
 };
 
 struct Foreground {
