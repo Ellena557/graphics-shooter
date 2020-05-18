@@ -194,13 +194,45 @@ int main(void)
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<> dis(0, 10000);
 
+	// степень детализации
+	int cur_detalization = 50;
+
 	MakeSpruce tree_maker;
-	MakeFireboll fireboll_maker;
+	//MakeFireboll fireboll_maker{ 50, 50 };
+	//MakeFireboll fireboll_maker{ 50 }; // { cur_detalization, cur_detalization };
 	MakeStump stump_maker;
-	MakeSpruceFireboll tree_boll_maker;
+	MakeSpruceFireboll tree_boll_maker{ cur_detalization, cur_detalization };
 	MakeForeground foreground_maker;
 	MakeFloor floor_maker;
 	MakeSky sky_maker;
+
+	int cur_fireball_maker_num = 5;
+
+	MakeFireboll fireboll_maker1{ 5 };
+	MakeFireboll fireboll_maker2{ 10 };
+	MakeFireboll fireboll_maker3{ 20 };
+	MakeFireboll fireboll_maker4{ 30 };
+	MakeFireboll fireboll_maker5{ 40 };
+	MakeFireboll fireboll_maker6{ 50 };
+	MakeFireboll fireboll_maker7{ 60 };
+	MakeFireboll fireboll_maker8{ 70 };
+	MakeFireboll fireboll_maker9{ 80 };
+	MakeFireboll fireboll_maker10{ 90 };
+
+	std::vector<MakeFireboll> all_fireball_makers = {
+		fireboll_maker1,
+		fireboll_maker2,
+		fireboll_maker3,
+		fireboll_maker4,
+		fireboll_maker5,
+		fireboll_maker6,
+		fireboll_maker7,
+		fireboll_maker8,
+		fireboll_maker9,
+		fireboll_maker10
+	};
+
+	MakeFireboll fireboll_maker = all_fireball_makers[cur_fireball_maker_num];
 
 	std::vector<Spruce> trees;
 	std::vector<Stump> stumps;
@@ -209,6 +241,7 @@ int main(void)
 	std::vector<Foreground> foreground;
 	std::vector<Floor> floor;
 	std::vector<Sky> sky;
+	std::vector<ExplodedBall> exploded_balls;
 
 	std::vector<GLfloat> fl_vertex_buffer_data = {};
 	std::vector<GLfloat> fl_uv_buffer_data = {};
@@ -227,6 +260,8 @@ int main(void)
 	double interval = dis(gen) / 10000.0 * 5 + 3; // Задержка до появления первого дерева
 	double start = glfwGetTime();
 	int old_mause_state = GLFW_RELEASE;
+	int old_plus_btn_state = GLFW_RELEASE;
+	int old_minus_btn_state = GLFW_RELEASE;
 	int old_ball_size_plus_state = GLFW_RELEASE;
 	int old_ball_size_minus_state = GLFW_RELEASE;
 	int old_defence_state = GLFW_RELEASE;
@@ -234,10 +269,15 @@ int main(void)
 	int old_texture_state = GLFW_RELEASE;
 	int old_floor_texture_state = GLFW_RELEASE;
 	int old_sky_texture_state = GLFW_RELEASE;
+	int old_plus_detal_state = GLFW_RELEASE;
+	int old_minus_detal_state = GLFW_RELEASE;
 	int backgorund_id = 0;
 	int player_score = 0;
 	int prev_floor_build_time = -10; // когда в прошлый раз добавляли пол
 	int prev_sky_build_time = -1000;
+	float current_scene_speed = 0.5f;
+	float current_explosion_speed = 0.5f;
+	float current_spruce_speed = 1.0f;
 
 	glClearColor(backgrounds[backgorund_id][0], backgrounds[backgorund_id][1], backgrounds[backgorund_id][2], backgrounds[backgorund_id][3]);
 	bool defence = false; // Защищаются ли ёлки.
@@ -322,7 +362,7 @@ int main(void)
 	initText2D("Holstein.DDS");
 
 	int alive = 1;
-
+	
 	do {
 		// Включение/выключение защиты ёлок по нажатию "D"
 		int new_defence_state = glfwGetKey(window, GLFW_KEY_D);
@@ -363,6 +403,78 @@ int main(void)
 		}
 		old_sky_texture_state = new_sky_texture_state;
 
+		// ускорение сцены
+		int new_plus_btn_state = glfwGetKey(window, GLFW_KEY_P);
+		if (new_plus_btn_state == GLFW_RELEASE && old_plus_btn_state == GLFW_PRESS) {
+			for (Fireboll fireboll : firebolls) {
+				if (current_scene_speed < 3.0f) {
+					current_scene_speed += 0.05f;
+				}
+				fireboll.speed = current_scene_speed;
+			}
+
+			for (SpruceFireboll fireboll : tree_bolls) {
+				if (current_spruce_speed < 3.0f) {
+					current_spruce_speed += 0.2f;
+				}
+				fireboll.speed = current_spruce_speed;
+			}
+
+			if (current_explosion_speed < 3.0f) {
+				current_explosion_speed += 0.05f;
+			}
+		}
+		old_plus_btn_state = new_plus_btn_state;
+
+		// замедление сцены
+		int new_minus_btn_state = glfwGetKey(window, GLFW_KEY_M);
+		if (new_minus_btn_state == GLFW_RELEASE && old_minus_btn_state == GLFW_PRESS) {
+			for (Fireboll fireboll : firebolls) {
+				if (current_scene_speed > 0.1f) {
+					current_scene_speed -= 0.05f;
+				}
+				fireboll.speed = current_scene_speed;
+			}
+			for (SpruceFireboll fireboll : tree_bolls) {
+				if (current_spruce_speed > 0.2f) {
+					current_spruce_speed -= 0.2f;
+				}
+				fireboll.speed = current_spruce_speed;
+			}
+			if (current_explosion_speed > 0.1f) {
+				current_explosion_speed -= 0.05f;
+			}
+		}
+		old_minus_btn_state = new_minus_btn_state;
+
+		// уменьшение детализации
+		int new_minus_detal_state = glfwGetKey(window, GLFW_KEY_MINUS);
+		if (new_minus_detal_state == GLFW_RELEASE && old_minus_detal_state == GLFW_PRESS) {
+			//if (cur_detalization > 10) {
+			//	cur_detalization -= 5;
+			//}
+			if (cur_fireball_maker_num > 0) {
+				cur_fireball_maker_num -= 1;
+			}
+			fireboll_maker = all_fireball_makers[cur_fireball_maker_num];
+			//MakeFireboll fireboll_maker{ cur_detalization, cur_detalization };
+		}
+		old_minus_detal_state = new_minus_detal_state;
+
+		// увеличение детализации
+		int new_plus_detal_state = glfwGetKey(window, GLFW_KEY_EQUAL);
+		if (new_plus_detal_state == GLFW_RELEASE && old_plus_detal_state == GLFW_PRESS) {
+			//if (cur_detalization < 100) {
+			//	cur_detalization += 5;
+			//}
+			if (cur_fireball_maker_num < all_fireball_makers.size() - 1) {
+				cur_fireball_maker_num += 1;
+			}
+			fireboll_maker = all_fireball_makers[cur_fireball_maker_num];
+			//MakeFireboll fireboll_maker{ cur_detalization, cur_detalization };
+		}
+		old_plus_detal_state = new_plus_detal_state;
+
 		// Изменение размера фаерболов по нажатию "+ или -"
 		// GLFW_KEY_MINUS, GLFW_KEY_EQUAL
 		/*int new_ball_size_state = glfwGetKey(window, GLFW_KEY_M);
@@ -395,11 +507,23 @@ int main(void)
 					std::swap(trees[j], trees[trees.size() - 1]);
 					trees.pop_back();
 					// Удаление файербола
-					std::swap(firebolls[i], firebolls[firebolls.size() - 1]);
-					firebolls.pop_back();
+					firebolls[i].isExploded = 1;
+					//std::swap(firebolls[i], firebolls[firebolls.size() - 1]);
+					//firebolls.pop_back();
 					player_score += 1;
 					break;
 				}
+			}
+		}
+
+		// Удаление файербола, создание взрыва
+		for (int i = 0; i < firebolls.size(); ++i) {
+			if (firebolls[i].isExploded == 1) {
+				firebolls[i].explosion_time = glfwGetTime();
+				exploded_balls.resize(exploded_balls.size() + 1);
+				fireboll_maker.add_exploded_ball(&exploded_balls[exploded_balls.size() - 1], &firebolls[i], firebolls[i].explosion_time, current_explosion_speed, cur_detalization);
+				std::swap(firebolls[i], firebolls[firebolls.size() - 1]);
+				firebolls.pop_back();
 			}
 		}
 
@@ -409,6 +533,17 @@ int main(void)
 			if (cur_time - stumps[i].birth > 120) {
 				std::swap(stumps[i], stumps[stumps.size() - 1]);
 				stumps.pop_back();
+			}
+		}
+
+		//cout << fireboll_maker.detalization;
+		
+		// Удаление старых взрывов
+		for (int i = 0; i < exploded_balls.size(); ++i) {
+			double cur_time = glfwGetTime();
+			if (cur_time - exploded_balls[i].birth > 5) {
+				std::swap(exploded_balls[i], exploded_balls[exploded_balls.size() - 1]);
+				exploded_balls.pop_back();
 			}
 		}
 
@@ -455,7 +590,6 @@ int main(void)
 			}
 		}
 		
-
 		// Обновление пола
 		if (glfwGetTime() - prev_floor_build_time > 10) {
 			//Удаление старого пола 
@@ -536,11 +670,10 @@ int main(void)
 		std::vector<GLfloat> g_uv_buffer_data = {};
 
 		// Добавление всех объектов в буферы
-
 		for (Fireboll fireboll : firebolls) {
 			// Нужно учесть, что фаерболы двигаются
 			Fireboll fireboll_copy = fireboll;
-			fireboll_maker.find_position(&fireboll_copy);
+			fireboll_maker.find_position(&fireboll_copy, current_scene_speed);
 			g_vertex_buffer_data.insert(g_vertex_buffer_data.end(), fireboll_copy.boll.begin(), fireboll_copy.boll.end());
 			g_color_buffer_data.insert(g_color_buffer_data.end(), fireboll_copy.boll_colors.begin(), fireboll_copy.boll_colors.end());
 			g_uv_buffer_data.insert(g_uv_buffer_data.end(), fireboll_copy.uves.begin(), fireboll_copy.uves.end());
@@ -549,7 +682,7 @@ int main(void)
 		for (SpruceFireboll tree_boll : tree_bolls) {
 			// Нужно учесть, что фаерболы двигаются
 			SpruceFireboll tree_boll_copy = tree_boll;
-			tree_boll_maker.find_position(&tree_boll_copy);
+			tree_boll_maker.find_position(&tree_boll_copy, current_spruce_speed);
 			g_vertex_buffer_data.insert(g_vertex_buffer_data.end(), tree_boll_copy.boll.begin(), tree_boll_copy.boll.end());
 			g_color_buffer_data.insert(g_color_buffer_data.end(), tree_boll_copy.boll_colors.begin(), tree_boll_copy.boll_colors.end());
 			g_uv_buffer_data.insert(g_uv_buffer_data.end(), tree_boll_copy.uves.begin(), tree_boll_copy.uves.end());
@@ -573,11 +706,23 @@ int main(void)
 			g_uv_buffer_data.insert(g_uv_buffer_data.end(), f.uves.begin(), f.uves.end());
 		}
 
-		//for (Floor fl : floor) {
-		//	g_vertex_buffer_data.insert(g_vertex_buffer_data.end(), fl.floor.begin(), fl.floor.end());
-		//	g_color_buffer_data.insert(g_color_buffer_data.end(), fl.colors.begin(), fl.colors.end());
-		//	g_uv_buffer_data.insert(g_uv_buffer_data.end(), fl.uves.begin(), fl.uves.end());
-		//}
+		for (ExplodedBall explosion : exploded_balls) {
+			// Нужно учесть, что части фаербола двигаются
+			ExplodedBall explosion_copy = explosion;
+			fireboll_maker.find_explosion_coords(&explosion_copy, current_scene_speed);
+			g_vertex_buffer_data.insert(g_vertex_buffer_data.end(), explosion_copy.boll.begin(), explosion_copy.boll.end());
+			g_color_buffer_data.insert(g_color_buffer_data.end(), explosion_copy.boll_colors.begin(), explosion_copy.boll_colors.end());
+			g_uv_buffer_data.insert(g_uv_buffer_data.end(), explosion_copy.uves.begin(), explosion_copy.uves.end());
+		}
+
+		if (exploded_balls.size() > 0) {
+			cout << exploded_balls[0].boll_colors[0] <<endl;
+			//cout << exploded_balls[0].boll[1] << endl;
+			//cout << exploded_balls[0].boll[2] << endl;
+			//cout << exploded_balls[0].normals[0];
+			//cout << exploded_balls[0].boll[1];
+			//cout << exploded_balls[0].boll[2];
+		}
 
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 		glBufferData(GL_ARRAY_BUFFER, g_vertex_buffer_data.size() * 4, g_vertex_buffer_data.data(), GL_STATIC_DRAW);
