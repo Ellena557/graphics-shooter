@@ -78,6 +78,7 @@ void drawFloor(GLuint floor_texture_id, GLuint floor_texture, GLuint vertexbuffe
 	glDisableVertexAttribArray(1);
 }
 
+
 void drawSky(GLuint sky_texture_id, GLuint sky_texture, GLuint vertexbuffer, GLuint uvbuffer, std::vector<GLfloat> sky_buffer, std::vector<GLfloat> sky_uv) {
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 	glBufferData(GL_ARRAY_BUFFER, sky_buffer.size() * 4, sky_buffer.data(), GL_STATIC_DRAW);
@@ -168,7 +169,6 @@ int main(void)
 	glBindVertexArray(VertexArrayID);
 
 	// Create and compile our GLSL program from the shaders
-	//GLuint programID = LoadShaders("TransformVertexShader.vertexshader", "ColorFragmentShader.fragmentshader");
 	GLuint programID1 = LoadShaders("textureVertex.vertexshader", "textureFragment.fragmentshader");
 
 	// Get a handle for our "MVP" uniform
@@ -198,8 +198,6 @@ int main(void)
 	int cur_detalization = 50;
 
 	MakeSpruce tree_maker;
-	//MakeFireboll fireboll_maker{ 50, 50 };
-	//MakeFireboll fireboll_maker{ 50 }; // { cur_detalization, cur_detalization };
 	MakeStump stump_maker;
 	MakeSpruceFireboll tree_boll_maker{ cur_detalization, cur_detalization };
 	MakeForeground foreground_maker;
@@ -273,8 +271,8 @@ int main(void)
 	int old_minus_detal_state = GLFW_RELEASE;
 	int backgorund_id = 0;
 	int player_score = 0;
-	int prev_floor_build_time = -10; // когда в прошлый раз добавляли пол
-	int prev_sky_build_time = -1000;
+	int prev_floor_build_time = -10;	// когда в прошлый раз добавляли пол
+	int prev_sky_build_time = -1000;	// когда в прошлый раз добавляли небо
 	float current_scene_speed = 0.5f;
 	float current_explosion_speed = 0.5f;
 	float current_spruce_speed = 1.0f;
@@ -302,6 +300,7 @@ int main(void)
 	GLuint Texture6 = loadBMP_custom("fireearth6.bmp");
 	GLuint TextureID6 = glGetUniformLocation(programID1, "myTextureSampler");
 
+	// floor textures
 	GLuint Texture_floor = loadBMP_custom("sand.bmp");
 	GLuint TextureID_floor = glGetUniformLocation(programID1, "myTextureSampler");
 
@@ -311,6 +310,7 @@ int main(void)
 	GLuint Texture_floor_2 = loadBMP_custom("grass.bmp");
 	GLuint TextureID_floor_2 = glGetUniformLocation(programID1, "myTextureSampler");
 
+	//sky textures
 	GLuint Texture_sky = loadBMP_custom("sky2.bmp");
 	GLuint TextureID_sky = glGetUniformLocation(programID1, "myTextureSampler");
 
@@ -450,33 +450,37 @@ int main(void)
 		// уменьшение детализации
 		int new_minus_detal_state = glfwGetKey(window, GLFW_KEY_MINUS);
 		if (new_minus_detal_state == GLFW_RELEASE && old_minus_detal_state == GLFW_PRESS) {
-			//if (cur_detalization > 10) {
-			//	cur_detalization -= 5;
-			//}
 			if (cur_fireball_maker_num > 0) {
 				cur_fireball_maker_num -= 1;
+
+				if (cur_fireball_maker_num == 0) {
+					cur_detalization = 5;
+				}
+				else {
+					cur_detalization -= 10;
+				}
 			}
 			fireboll_maker = all_fireball_makers[cur_fireball_maker_num];
-			//MakeFireboll fireboll_maker{ cur_detalization, cur_detalization };
 		}
 		old_minus_detal_state = new_minus_detal_state;
 
 		// увеличение детализации
 		int new_plus_detal_state = glfwGetKey(window, GLFW_KEY_EQUAL);
 		if (new_plus_detal_state == GLFW_RELEASE && old_plus_detal_state == GLFW_PRESS) {
-			//if (cur_detalization < 100) {
-			//	cur_detalization += 5;
-			//}
 			if (cur_fireball_maker_num < all_fireball_makers.size() - 1) {
 				cur_fireball_maker_num += 1;
 			}
+			if (cur_fireball_maker_num == 1) {
+				cur_detalization = 10;
+			}
+			else {
+				cur_detalization += 10;
+			}
 			fireboll_maker = all_fireball_makers[cur_fireball_maker_num];
-			//MakeFireboll fireboll_maker{ cur_detalization, cur_detalization };
 		}
 		old_plus_detal_state = new_plus_detal_state;
 
 		// Изменение размера фаерболов по нажатию "+ или -"
-		// GLFW_KEY_MINUS, GLFW_KEY_EQUAL
 		/*int new_ball_size_state = glfwGetKey(window, GLFW_KEY_M);
 		if (new_ball_size_state == GLFW_RELEASE && old_ball_size_minus_state == GLFW_PRESS) {
 			boll_scale = std::min(boll_scale + 5, 100);
@@ -535,8 +539,6 @@ int main(void)
 				stumps.pop_back();
 			}
 		}
-
-		//cout << fireboll_maker.detalization;
 		
 		// Удаление старых взрывов
 		for (int i = 0; i < exploded_balls.size(); ++i) {
@@ -715,15 +717,6 @@ int main(void)
 			g_uv_buffer_data.insert(g_uv_buffer_data.end(), explosion_copy.uves.begin(), explosion_copy.uves.end());
 		}
 
-		if (exploded_balls.size() > 0) {
-			cout << exploded_balls[0].boll_colors[0] <<endl;
-			//cout << exploded_balls[0].boll[1] << endl;
-			//cout << exploded_balls[0].boll[2] << endl;
-			//cout << exploded_balls[0].normals[0];
-			//cout << exploded_balls[0].boll[1];
-			//cout << exploded_balls[0].boll[2];
-		}
-
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 		glBufferData(GL_ARRAY_BUFFER, g_vertex_buffer_data.size() * 4, g_vertex_buffer_data.data(), GL_STATIC_DRAW);
 
@@ -798,6 +791,7 @@ int main(void)
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 
+		// draw floor
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, floor_textures[current_floor_texture_num]);
 		glUniform1i(TextureID_floor, 0);
@@ -832,7 +826,7 @@ int main(void)
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 
-		//sky 
+		// draw sky 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, sky_textures[current_sky_texture_num]);
 		glUniform1i(TextureID_sky, 0);
