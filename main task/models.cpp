@@ -336,7 +336,6 @@ MakeSpruceFireboll::MakeSpruceFireboll(int N_PHI, int N_PSI)
 	// Установка красного и синего цветов. Зелёный уже установлен на равномерное убывание от полюсов.
 	for (int i = 0; i < k; i += 3) {
 		boll_colors[i] = 1. - boll_colors[i]; // обычно до этого был 0.
-		//boll_colors[i + 2] = 0.;
 	}
 
 	for (int i = 0; i < k; ++i) {
@@ -680,10 +679,8 @@ void MakeSky::add_sky(glm::vec3 position, Sky* res)
 	for (int i = 0; i < sky.size(); i += 3) {
 		float p = sky[i];
 		float q = sky[i + 1];
-		//float r = sky[i + 2];
 		sky[i] = q;
 		sky[i + 1] = p;
-		//sky[i + 2] = p * x.z + q * y.z + r * z.z;
 	}
 
 	res->sky = sky;
@@ -755,6 +752,7 @@ void MakeFireboll::add_exploded_ball(ExplodedBall* res, Fireboll* fireball, doub
 	res->normals = normals;
 	res->birth = fireball->explosion_time;
 }
+
 
 void MakeFireboll::find_explosion_coords(ExplodedBall* res, float speed)
 {
