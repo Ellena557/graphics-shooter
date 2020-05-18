@@ -1,5 +1,7 @@
 # OpenGL shooter
 
+Оптимизация общего проекта: https://github.com/iiraskin/3D-graphics/tree/master/Opengl_shooter
+
 Управление:
 
 * Поворот - при движении камеры.
