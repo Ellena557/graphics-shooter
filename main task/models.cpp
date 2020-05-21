@@ -714,9 +714,21 @@ void MakeFireboll::add_exploded_ball(ExplodedBall* res, Fireboll* fireball, doub
 		xx = (y3 - y1) * (z2 - z1) - (y2 - y1) * (z3 - z1);
 		yy = -((x3 - x1) * (z2 - z1) - (x2 - x1) * (z3 - z1));
 		zz = (x3 - x1) * (y2 - y1) - (x2 - x1) * (y3 - y1);
+		
 		normals[counter] = xx;
 		normals[counter + 1] = yy;
 		normals[counter + 2] = zz;
+
+		float ddd = -xx * x1 - yy * y1 - zz * z1;
+
+		glm::vec3 pos_centre = fireball->centre;
+
+		if (pos_centre.x * xx + pos_centre.y * yy + pos_centre.z * zz + ddd > 0) {
+			normals[counter] = -xx;
+			normals[counter + 1] = -yy;
+			normals[counter + 2] = -zz;
+		}
+
 		counter += 3;
 	}
 
